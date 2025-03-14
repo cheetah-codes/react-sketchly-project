@@ -14,31 +14,31 @@ import "./index.css";
 const Menu = () => {
   return (
     <div className="menuContainer">
-      <div>
+      <div className="iconwrapper">
         <FontAwesomeIcon icon={faHand} />
       </div>
 
-      <div>
+      <div className="iconwrapper">
         <FontAwesomeIcon icon={faArrowPointer} />
       </div>
 
-      <div>
+      <div className="iconwrapper">
         <FontAwesomeIcon icon={faPencil} />
       </div>
 
-      <div>
+      <div className="iconwrapper">
         <FontAwesomeIcon icon={faEraser} />
       </div>
 
-      <div>
+      <div className="iconwrapper">
         <FontAwesomeIcon icon={faRotateLeft} />
       </div>
 
-      <div>
+      <div className="iconwrapper">
         <FontAwesomeIcon icon={faRotateRight} />
       </div>
 
-      <div>
+      <div className="iconwrapper">
         <FontAwesomeIcon icon={faFileArrowDown} />
       </div>
     </div>

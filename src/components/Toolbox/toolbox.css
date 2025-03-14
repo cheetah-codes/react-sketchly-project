@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+.toolbox-container {
+  @apply p-5 absolute top-1/4 left-5 w-64 rounded-md;
+  box-shadow: var(--shadow-shadow1);
+  border: 1px solid var(--color-border1);
+  background-color: var(--color-background1);
+}
+
+/* toolitem = tool-sec-wrapper */
+.toolbox-sec-wrapper {
+  @apply mb-5;
+  .tool-desc {
+    font-size: 11px;
+    color: var(--colors-text1);
+  }
+
+  .prop-wrapper {
+    @apply flex justify-between mt-2;
+
+    .colorbox {
+      @apply h-5 w-5 mr-1 rounded-full cursor-pointer;
+
+      &:hover,
+      &.active {
+        border: 1.5px solid white;
+        box-shadow: var(--shadow-shadow2);
+      }
+    }
+  }
+}

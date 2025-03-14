@@ -1,0 +1,27 @@
+@import "../variables";
+
+* {
+  box-sizing: border-box;
+}
+
+.container {
+  //   display: flex;
+  width: 240px;
+  background-color: #ffffff;
+  padding: 1.25em 0px 1.875em 1.875em;
+  border-radius: 4px;
+
+  p {
+    margin: 15px auto 12px auto;
+  }
+
+  :nth-child(3) {
+    font-size: 24px;
+    font-weight: 700;
+    color: $secondary-text;
+  }
+}
+
+td {
+  border: 1px solid black;
+}

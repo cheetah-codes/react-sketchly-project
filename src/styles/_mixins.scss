@@ -1,0 +1,42 @@
+@mixin login-half {
+  width: 50%;
+  display: flex;
+}
+
+@mixin text-input {
+  border-radius: 5px;
+  padding-left: 10px;
+  border: 2px solid rgba(84, 95, 125, 0.15);
+  outline: none;
+  height: 100%;
+  width: 100%;
+}
+
+@mixin nav {
+  padding: 20px;
+  height: 70px;
+}
+
+@mixin nav-image {
+  display: inline-block;
+  object-fit: contain;
+  margin-right: 20px;
+}
+
+@mixin dashboard-card {
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 3px 5px 20px rgba(0, 0, 0, 0.04);
+  padding: 20px;
+}
+
+@mixin media-md {
+  @media screen and (max-width: 768px) {
+    @content;
+  }
+}
+@mixin media-lg {
+  @media (min-width: 768px) and (max-width: 1024px) {
+    @content;
+  }
+}

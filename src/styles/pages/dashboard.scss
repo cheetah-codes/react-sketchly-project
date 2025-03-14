@@ -1,0 +1,21 @@
+// * {
+//   box-sizing: border-box;
+// }
+
+section {
+  width: 100%;
+  justify-content: space-between;
+  background-color: #e5e5e5;
+  padding: 60px;
+  overflow: hidden;
+
+  h1 {
+    font-size: 32px;
+    line-height: 1.2;
+  }
+
+  .display-cards {
+    display: flex;
+    justify-content: space-between;
+  }
+}

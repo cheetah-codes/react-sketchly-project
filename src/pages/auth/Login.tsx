@@ -3,7 +3,7 @@ import { authenticator } from "../../utils/firebase.config";
 import { useContext, useRef, useState } from "react";
 import { useToast } from "../../contexts/toast-context";
 // import withAuthLayout from "../../components/layouts/withAuthLayout";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { AuthContext } from "../../contexts/AuthContext";
 // import { AuthContext } from "../../contexts/AuthContext";
 

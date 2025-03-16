@@ -6,38 +6,39 @@ import Signup from "../pages/auth/Signup";
 // import { AuthContext } from "../contexts/AuthContext";
 import Home from "../pages/app/Home";
 import MainLayout from "../components/layouts/MainLayout";
+import App from "../App";
 // const auth = useContext(AuthContext);
 
 export const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <AuthLayout />,
-    children: [
-      {
-        path: "",
-        index: true,
-        element: <Navigate to={"login"} />,
-      },
+  // {
+  //   path: "",
+  //   element: <AuthLayout />,
+  //   children: [
+  //     // {
+  //     //   index: true,
+  //     //   path: "",
+  //     //   element: <Navigate to={"login"} />,
+  //     // },
 
-      {
-        path: "/signup",
-        element: <Signup />,
-      },
-      {
-        path: "/login",
-        element: <Login />,
-      },
-    ],
-  },
+  //     {
+  //       path: "/signup",
+  //       element: <Signup />,
+  //     },
+  //     {
+  //       path: "/login",
+  //       element: <Login />,
+  //     },
+  //   ],
+  // },
 
   {
     path: "/",
     element: <MainLayout />,
     children: [
       {
-        path: "/workspace",
+        path: "workspace",
+        index: true,
         element: <Home />,
-        children: [],
       },
     ],
   },

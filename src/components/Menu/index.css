@@ -10,7 +10,7 @@
   --color-border1: "#b8b8b8";
   --color-border2: "#d6d6d6";
   --color-text1: "#3d3d3d";
-  --color-text2: "#e3e2fe";
+  --color-text2: #e3e2fe;
 }
 
 .menuContainer {
@@ -24,9 +24,12 @@
 .iconwrapper {
   @apply cursor-pointer flex justify-center items-center h-10 w-10 rounded-md;
 
-  &:hover,
   &.active {
-    background-color: var(--colors-text2);
+    background-color: var(--color-text2);
+  }
+  &:hover {
+    background-color: var(--color-text2);
+    opacity: 0.5;
   }
   .icon {
     color: var(--colors-text1);

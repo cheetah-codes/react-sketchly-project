@@ -19,4 +19,14 @@ const COLORS_UTILS = {
   WHITE: "white",
 };
 
-export { COLORS_UTILS };
+const MENU_BTN_UTILS = {
+  PENCIL: "PENCIL",
+  ERASER: "ERASER",
+  SELECTION: "POINTER",
+  PAN: "HAND",
+  UNDO: "UNDO",
+  REDO: "REDO",
+  DOWNLOAD: "DOWNLOAD",
+};
+
+export { COLORS_UTILS, MENU_BTN_UTILS };

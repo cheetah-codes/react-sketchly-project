@@ -2,15 +2,15 @@ import { initializeApp } from "firebase/app";
 import { getFirestore, collection, addDoc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 const firebaseConfig = {
-  apiKey: "AIzaSyDoHEVJy1o0Z7rRA2SOFy4eXTFhOC3OpPc",
-  authDomain: "lendsqr-assessment-0.firebaseapp.com",
-  projectId: "lendsqr-assessment-0",
-  storageBucket: "lendsqr-assessment-0.appspot.com",
-  messagingSenderId: "1010764361129",
-  appId: "1:1010764361129:web:ae79c28e504b192fed68b8",
+  apiKey: "AIzaSyBBuOg_GhxfCgTZubGftYJ23dUUoJ5atZM",
+  authDomain: "sketchly-io.firebaseapp.com",
+  projectId: "sketchly-io",
+  storageBucket: "sketchly-io.firebasestorage.app",
+  messagingSenderId: "694419604943",
+  appId: "1:694419604943:web:2411f33ae28beefd2ebeba",
 };
 //init firebasee app
-initializeApp(firebaseConfig);
+const app = initializeApp(firebaseConfig);
 
 //init services
 const db = getFirestore();

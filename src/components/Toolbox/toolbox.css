@@ -23,7 +23,7 @@
 
       &:hover,
       &.active {
-        border: 1.5px solid white;
+        border: 1.5px solid red;
         box-shadow: var(--shadow-shadow2);
       }
     }

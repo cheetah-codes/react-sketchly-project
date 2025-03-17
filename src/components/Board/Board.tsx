@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { useAppSelector } from "../../store/hooks";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
 // import { CanvasContextType } from "../../types/types";
 
 type PenPointTypes = {
@@ -8,16 +8,38 @@ type PenPointTypes = {
 };
 
 import "./board.css";
+import { MENU_BTN_UTILS } from "../../utils";
+import { actionBtnClick } from "../../store/slice/menuSlice";
 
 const Board = () => {
+  const dispatch = useAppDispatch();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const Drawable = useRef<boolean>(false);
   const currentXYPenPoint = useRef<PenPointTypes>({ x: 0, y: 0 });
 
-  const activeMenuBtn = useAppSelector((state) => state.menu.activeMenuBtn);
+  const { activeMenuBtn, actionMenuBtn } = useAppSelector(
+    (state) => state.menu
+  );
   const { color, size } = useAppSelector(
     (state) => state.toolbox[activeMenuBtn]
   );
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const context = canvas.getContext("2d");
+
+    if (actionMenuBtn === MENU_BTN_UTILS.DOWNLOAD) {
+      const Url = canvas.toDataURL();
+      const anchor = document.createElement("a");
+      anchor.href = Url;
+      anchor.download = "sketch.png";
+      anchor.click();
+      console.log(Url);
+    }
+
+    dispatch(actionBtnClick(null));
+  }, [actionMenuBtn, dispatch]);
 
   useEffect(() => {
     if (!canvasRef.current) return;

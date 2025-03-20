@@ -2,8 +2,6 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 // import { CanvasContextType } from "../../types/types";
 
-type ImageDataType = Uint8ClampedArray | undefined;
-
 import "./board.css";
 import { MENU_BTN_UTILS } from "../../utils";
 import { actionBtnClick } from "../../store/slice/menuSlice";
@@ -15,9 +13,7 @@ const Board = () => {
 
   const Drawable = useRef<boolean>(false);
 
-  const [historyArray, setHistoryArray] = useState<
-    (Uint8ClampedArray | undefined)[]
-  >([]);
+  const historyArray = useRef<(ImageData | undefined)[]>([]);
 
   const historyPointer = useRef<number>(0);
 
@@ -102,9 +98,9 @@ const Board = () => {
         canvas.width,
         canvas.height
       );
-      console.log(imageData, "image adata");
-      setHistoryArray([...historyArray, imageData?.data]);
-      historyPointer.current = historyArray.length - 1;
+
+      historyArray.current.push(imageData);
+      historyPointer.current = historyArray.current.length - 1;
     };
 
     const handleKeyPressCombo = (e: React.KeyboardEvent) => {
@@ -114,7 +110,7 @@ const Board = () => {
       }
 
       if (e.code == "KeyY" && (e.metaKey || e.ctrlKey)) {
-        handleUndo();
+        handleRedo();
       }
     };
 
@@ -138,11 +134,11 @@ const Board = () => {
 
     if (historyPointer.current > 0) historyPointer.current -= 1;
 
-    const imageData = historyArray[historyPointer.current];
+    const imageData = historyArray.current[historyPointer.current];
 
+    if (!imageData) return;
     context?.putImageData(imageData, 0, 0);
-
-    alert("undo");
+    console.log(imageData, "imagedata from undo function");
   };
 
   const handleRedo = () => {
@@ -150,12 +146,13 @@ const Board = () => {
     const canvas = canvasRef.current;
     const context = canvas.getContext("2d");
 
-    if (historyPointer.current < historyArray.length - 1) {
+    if (historyPointer.current < historyArray.current.length - 1) {
       historyPointer.current += 1;
     }
 
-    const imageData = historyArray[historyPointer.current];
+    const imageData = historyArray.current[historyPointer.current]!;
 
+    if (!imageData) return;
     context?.putImageData(imageData, 0, 0);
   };
 

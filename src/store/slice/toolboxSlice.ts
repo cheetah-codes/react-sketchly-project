@@ -18,7 +18,7 @@ export const toolBoxSlice = createSlice({
   initialState,
   reducers: {
     strokewidth: (state, action) => {
-      state[action.payload.prop].size = action.payload.size;
+      state[action.payload.prop].size = action.payload?.size;
     },
     strokecolor: (state, action) => {
       state[action.payload?.prop].color = action.payload?.color;

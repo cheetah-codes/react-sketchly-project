@@ -1,10 +1,21 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 // import { CanvasContextType } from "../../types/types";
 
 import "./board.css";
 import { MENU_BTN_UTILS } from "../../utils";
 import { actionBtnClick } from "../../store/slice/menuSlice";
+import { socket } from "../../utils/socket";
+
+type ConfigType = {
+  colour: string;
+  size: number;
+};
+
+type CordsType = {
+  x: number;
+  y: number;
+};
 
 const Board = () => {
   const dispatch = useAppDispatch();
@@ -48,17 +59,27 @@ const Board = () => {
     const canvas = canvasRef.current;
     const context = canvas.getContext("2d");
 
-    console.log(context?.stroke, "this context");
-
     // to check for undefined and set an abitrary value that is obviously out of range of the values,
     // in color and size -for debug friendly situations
     if (!context) return;
-    const UpdateConfig = () => {
+    const UpdateConfig = (color?: string, size?: number) => {
       context.strokeStyle = color ?? "red";
       context.lineWidth = size ?? 10;
     };
 
-    UpdateConfig();
+    const handleConfigUpdate = (config: ConfigType) => {
+      console.log("config--", config);
+
+      UpdateConfig(config.colour, config.size);
+    };
+
+    UpdateConfig(color, size);
+
+    socket.on("updateConfig", handleConfigUpdate);
+
+    return () => {
+      socket.off("updateConfig", handleConfigUpdate);
+    };
   }, [color, size]);
 
   //on mount
@@ -71,23 +92,28 @@ const Board = () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
+    const beginPath = (x: number, y: number) => {
+      context?.beginPath();
+      context?.moveTo(x, y);
+    };
+
+    const drawStroke = (x: number, y: number) => {
+      context?.lineTo(x, y);
+      context?.stroke();
+    };
+
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
       Drawable.current = true;
+      beginPath(e.clientX, e.clientY);
 
-      context?.beginPath();
-      context?.moveTo(e.clientX, e.clientY);
-      // context?.fillRect(
-      //   e.clientX,
-      //   e.clientY,
-      //   currentXYPenPoint.current.x,
-      //   currentXYPenPoint.current.y
-      // );
+      socket.emit("beginPath", { x: e.clientX, y: e.clientY });
     };
 
     const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
       if (!Drawable.current) return;
-      context?.lineTo(e.clientX, e.clientY);
-      context?.stroke();
+      drawStroke(e.clientX, e.clientY);
+
+      socket.emit("drawStroke", { x: e.clientX, y: e.clientY });
     };
 
     const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -114,16 +140,30 @@ const Board = () => {
       }
     };
 
+    const handleBeginpath = (cords: CordsType) => {
+      beginPath(cords.x, cords.y);
+    };
+
+    const handleDrawStroke = (cords: CordsType) => {
+      drawStroke(cords.x, cords.y);
+    };
+
     canvas.addEventListener("mousedown", handleMouseDown);
     canvas.addEventListener("mousemove", handleMouseMove);
     canvas.addEventListener("mouseup", handleMouseUp);
     document.addEventListener("keydown", handleKeyPressCombo);
+
+    socket.on("beginPath", handleBeginpath);
+    socket.on("drawStroke", handleDrawStroke);
 
     return () => {
       canvas.removeEventListener("mousedown", handleMouseDown);
       canvas.removeEventListener("mousemove", handleMouseMove);
       canvas.removeEventListener("mouseup", handleMouseUp);
       document.removeEventListener("keydown", handleKeyPressCombo);
+
+      socket.off("beginPath", handleBeginpath);
+      socket.off("drawStroke", handleDrawStroke);
     };
   }, []);
 
@@ -138,7 +178,6 @@ const Board = () => {
 
     if (!imageData) return;
     context?.putImageData(imageData, 0, 0);
-    console.log(imageData, "imagedata from undo function");
   };
 
   const handleRedo = () => {
@@ -155,6 +194,10 @@ const Board = () => {
     if (!imageData) return;
     context?.putImageData(imageData, 0, 0);
   };
+
+  socket.on("connect", () => {
+    console.log(socket.id, "client connected succesfully");
+  });
 
   return (
     <div className="flex justify-center">

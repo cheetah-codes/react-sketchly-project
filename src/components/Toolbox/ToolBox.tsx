@@ -1,9 +1,9 @@
 // import { width } from "@fortawesome/free-solid-svg-icons/faBell";
-import { useSelector } from "react-redux";
 import { COLORS_UTILS } from "../../utils";
 import "./toolbox.css";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { strokewidth, strokecolor } from "../../store/slice/toolboxSlice";
+import { socket } from "../../utils/socket";
 
 // const EventType = {
 //   [e]:React.ChangeEvent<HTMLInputElement>
@@ -19,10 +19,12 @@ const ToolBox = () => {
 
   const handleBrushSize = (e: React.ChangeEvent<HTMLInputElement>) => {
     dispatch(strokewidth({ prop: activeMenuBtn, size: e.target.value }));
+    socket.emit("updateConfig", { colour: color, size: e.target.value });
   };
 
-  const handleStrokeColor = (color: string) => {
-    dispatch(strokecolor({ prop: activeMenuBtn, color }));
+  const handleStrokeColor = (newColour: string) => {
+    dispatch(strokecolor({ prop: activeMenuBtn, color: newColour }));
+    socket.emit("updateConfig", { colour: newColour, size });
   };
   return (
     <>

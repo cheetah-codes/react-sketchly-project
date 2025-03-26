@@ -10,6 +10,8 @@ import {
   faHand,
   faArrowPointer,
   faDownload,
+  faBox,
+  faSquare,
 } from "@fortawesome/free-solid-svg-icons";
 import { MENU_BTN_UTILS } from "../../utils";
 import "./index.css";
@@ -65,16 +67,21 @@ const Menu = () => {
         <FontAwesomeIcon icon={faEraser} />
       </div>
 
+      <div
+        className={`${
+          activeMenuBtn === MENU_BTN_UTILS.SQUARE ? "active" : ""
+        } iconwrapper`}
+        onClick={() => handleMenuClick(MENU_BTN_UTILS.SQUARE)}
+      >
+        <FontAwesomeIcon icon={faSquare} />
+      </div>
+
       <div className="iconwrapper">
         <FontAwesomeIcon
           icon={faDownload}
           onClick={() => handleActionBtnClick(MENU_BTN_UTILS.DOWNLOAD)}
         />
       </div>
-
-      {/* <div className="iconwrapper">
-        <FontAwesomeIcon icon={} />
-      </div> */}
 
       {/* <div className="iconwrapper">
         <FontAwesomeIcon icon={faFileArrowDown} />

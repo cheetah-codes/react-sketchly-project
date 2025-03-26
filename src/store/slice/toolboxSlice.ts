@@ -11,6 +11,9 @@ const initialState = {
     size: 3,
   },
   [MENU_BTN_UTILS.DOWNLOAD]: {},
+  [MENU_BTN_UTILS.SQUARE]: {
+    color: "",
+  },
 };
 
 export const toolBoxSlice = createSlice({

@@ -1,7 +1,7 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 // import { CanvasContextType } from "../../types/types";
-
+import rough from "roughjs";
 import "./board.css";
 import { MENU_BTN_UTILS } from "../../utils";
 import { actionBtnClick } from "../../store/slice/menuSlice";
@@ -17,7 +17,25 @@ type CordsType = {
   y: number;
 };
 
+type EventType = React.MouseEvent<HTMLCanvasElement>;
+
+type ElementType = {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  roughJsx: typeof Drawable;
+};
+
+const generator = rough.generator();
+
+const createElement = (x1: number, y1: number, x2: number, y2: number) => {
+  const roughJsx = generator.line(x1, y1, x2, y2);
+  return { x1, y1, x2, y2, roughJsx };
+};
+
 const Board = () => {
+  const [elements, setElements] = useState([]);
   const dispatch = useAppDispatch();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -33,6 +51,7 @@ const Board = () => {
   const { activeMenuBtn, actionMenuBtn } = useAppSelector(
     (state) => state.menu
   );
+
   const { color, size } = useAppSelector(
     (state) => state.toolbox[activeMenuBtn]
   );
@@ -82,15 +101,22 @@ const Board = () => {
     };
   }, [color, size]);
 
-  //on mount
+  //on browser pain
 
   useLayoutEffect(() => {
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
+
     const context = canvas.getContext("2d");
 
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+
+    //*****roughjs initialization *****//
+    const roughCanvas = rough.canvas(canvas);
+
+    const line = generator.line(10, 10, 110, 110);
+    roughCanvas.draw(line);
 
     const beginPath = (x: number, y: number) => {
       context?.beginPath();
@@ -100,6 +126,16 @@ const Board = () => {
     const drawStroke = (x: number, y: number) => {
       context?.lineTo(x, y);
       context?.stroke();
+    };
+
+    const drawRect = (e: EventType) => {
+      const element = createElement(e.clientX, e.clientY, e.clientX, e.clientY);
+
+      setElements((prev) => [...prev, element]);
+
+      const rect = generator.rectangle(10, 10, 100, 100);
+
+      roughCanvas.draw(rect);
     };
 
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -112,6 +148,10 @@ const Board = () => {
     const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
       if (!Drawable.current) return;
       drawStroke(e.clientX, e.clientY);
+
+      if (activeMenuBtn === "SQUARE") {
+        drawRect(e);
+      }
 
       socket.emit("drawStroke", { x: e.clientX, y: e.clientY });
     };
@@ -201,7 +241,9 @@ const Board = () => {
 
   return (
     <div className="flex justify-center">
-      <canvas ref={canvasRef}>Drawing canvas</canvas>
+      <canvas ref={canvasRef} id="canvas">
+        Drawing canvas
+      </canvas>
       <div onClick={() => handleUndo()}>undo</div>
     </div>
   );

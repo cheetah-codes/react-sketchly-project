@@ -27,6 +27,7 @@ const MENU_BTN_UTILS = {
   UNDO: "UNDO",
   REDO: "REDO",
   DOWNLOAD: "DOWNLOAD",
+  SQUARE: "SQUARE",
 };
 
 export { COLORS_UTILS, MENU_BTN_UTILS };

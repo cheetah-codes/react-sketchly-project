@@ -6,13 +6,27 @@ const initialState = {
     color: COLORS_UTILS.BLACK,
     size: 3,
   },
+
   [MENU_BTN_UTILS.ERASER]: {
     color: COLORS_UTILS.WHITE,
     size: 3,
   },
+
   [MENU_BTN_UTILS.DOWNLOAD]: {},
+
   [MENU_BTN_UTILS.SQUARE]: {
     color: "",
+    size: 3,
+  },
+
+  [MENU_BTN_UTILS.PAN]: {
+    color: "",
+    size: 3,
+  },
+
+  [MENU_BTN_UTILS.SELECTION]: {
+    color: "",
+    size: 3,
   },
 };
 

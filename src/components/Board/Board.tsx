@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 // import { CanvasContextType } from "../../types/types";
 import rough from "roughjs";
@@ -6,6 +6,7 @@ import "./board.css";
 import { MENU_BTN_UTILS } from "../../utils";
 import { actionBtnClick } from "../../store/slice/menuSlice";
 import { socket } from "../../utils/socket";
+import { Drawable } from "roughjs/bin/core";
 
 type ConfigType = {
   colour: string;
@@ -24,18 +25,23 @@ type ElementType = {
   y1: number;
   x2: number;
   y2: number;
-  roughJsx: typeof Drawable;
+  roughJsx?: Drawable;
 };
 
 const generator = rough.generator();
 
-const createElement = (x1: number, y1: number, x2: number, y2: number) => {
+const createElement = (
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number
+): ElementType => {
   const roughJsx = generator.line(x1, y1, x2, y2);
   return { x1, y1, x2, y2, roughJsx };
 };
 
 const Board = () => {
-  const [elements, setElements] = useState([]);
+  const [elements, setElements] = useState<ElementType[]>([]);
   const dispatch = useAppDispatch();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -56,10 +62,16 @@ const Board = () => {
     (state) => state.toolbox[activeMenuBtn]
   );
 
+  const activeMenuBtnRef = useRef(activeMenuBtn);
+
   useEffect(() => {
     if (!canvasRef.current) return;
+
     const canvas = canvasRef.current;
     // const context = canvas.getContext("2d");
+
+    if (!activeMenuBtn) return;
+    activeMenuBtnRef.current = activeMenuBtn;
 
     if (actionMenuBtn === MENU_BTN_UTILS.DOWNLOAD) {
       const Url = canvas.toDataURL();
@@ -69,9 +81,10 @@ const Board = () => {
       anchor.click();
       console.log(Url);
     }
+    // console.log("active2", activeMenuBtn);
 
     dispatch(actionBtnClick(null));
-  }, [actionMenuBtn, dispatch]);
+  }, [actionMenuBtn, activeMenuBtn, dispatch]);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -101,7 +114,7 @@ const Board = () => {
     };
   }, [color, size]);
 
-  //on browser pain
+  //bafore browser paint
 
   useLayoutEffect(() => {
     if (!canvasRef.current) return;
@@ -115,8 +128,8 @@ const Board = () => {
     //*****roughjs initialization *****//
     const roughCanvas = rough.canvas(canvas);
 
-    const line = generator.line(10, 10, 110, 110);
-    roughCanvas.draw(line);
+    // const line = generator.line(10, 10, 110, 110);
+    // roughCanvas.draw(line);
 
     const beginPath = (x: number, y: number) => {
       context?.beginPath();
@@ -131,17 +144,40 @@ const Board = () => {
     const drawRect = (e: EventType) => {
       const element = createElement(e.clientX, e.clientY, e.clientX, e.clientY);
 
-      setElements((prev) => [...prev, element]);
-
-      const rect = generator.rectangle(10, 10, 100, 100);
-
-      roughCanvas.draw(rect);
+      setElements((prev: any[]) => [...prev, element]);
     };
+
+    // const rect = generator.rectangle(10, 10, 100, 100);
+
+    // roughCanvas.draw(rect);
+
+    const UpdateRectValue = ({ clientX, clientY }: EventType) => {
+      const { x1, y1 } = elements[elements.length - 1];
+      const updatedElement = createElement(x1, y1, clientX, clientY);
+
+      const copyElements = [...elements];
+
+      copyElements[elements.length - 1] = updatedElement;
+
+      setElements(copyElements);
+
+      elements.forEach(({ roughJsx }) => {
+        if (!roughJsx) return;
+        roughCanvas.draw(roughJsx);
+        // context?.stroke();
+      });
+    };
+
+    //mouse events
 
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
       Drawable.current = true;
+
       beginPath(e.clientX, e.clientY);
 
+      if (activeMenuBtnRef.current === MENU_BTN_UTILS.LINE) {
+        drawRect(e);
+      }
       socket.emit("beginPath", { x: e.clientX, y: e.clientY });
     };
 
@@ -149,8 +185,10 @@ const Board = () => {
       if (!Drawable.current) return;
       drawStroke(e.clientX, e.clientY);
 
-      if (activeMenuBtn === "SQUARE") {
-        drawRect(e);
+      if (activeMenuBtnRef.current === MENU_BTN_UTILS.LINE) {
+        if (!Drawable.current) return;
+
+        UpdateRectValue(e);
       }
 
       socket.emit("drawStroke", { x: e.clientX, y: e.clientY });
@@ -165,13 +203,16 @@ const Board = () => {
         canvas.height
       );
 
+      if (activeMenuBtnRef.current === MENU_BTN_UTILS.SQUARE) {
+        context?.stroke();
+      }
+
       historyArray.current.push(imageData);
       historyPointer.current = historyArray.current.length - 1;
     };
 
     const handleKeyPressCombo = (e: React.KeyboardEvent) => {
       if (e.code == "KeyZ" && (e.ctrlKey || e.metaKey)) {
-        // console.log("hey you pressed for undo");
         handleUndo();
       }
 
@@ -186,6 +227,9 @@ const Board = () => {
 
     const handleDrawStroke = (cords: CordsType) => {
       drawStroke(cords.x, cords.y);
+
+      if (activeMenuBtnRef.current === MENU_BTN_UTILS.SQUARE) {
+      }
     };
 
     canvas.addEventListener("mousedown", handleMouseDown);
@@ -205,7 +249,7 @@ const Board = () => {
       socket.off("beginPath", handleBeginpath);
       socket.off("drawStroke", handleDrawStroke);
     };
-  }, []);
+  }, [elements]);
 
   const handleUndo = () => {
     if (!canvasRef.current) return;
@@ -249,4 +293,4 @@ const Board = () => {
   );
 };
 
-export default Board;
+export default memo(Board);

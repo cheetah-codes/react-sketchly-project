@@ -12,6 +12,9 @@ import {
   faDownload,
   faBox,
   faSquare,
+  faCircle,
+  faMinus,
+  faArrowRight,
 } from "@fortawesome/free-solid-svg-icons";
 import { MENU_BTN_UTILS } from "../../utils";
 import "./index.css";
@@ -19,7 +22,7 @@ import { activebtnClick, actionBtnClick } from "../../store/slice/menuSlice";
 
 const Menu = () => {
   const dispatch = useAppDispatch();
-  const activeMenuBtn = useAppSelector((state) => state.menu.activeMenuBtn);
+  const { activeMenuBtn } = useAppSelector((state) => state.menu);
 
   const handleMenuClick = (utils: any) => {
     dispatch(activebtnClick(utils));
@@ -74,6 +77,33 @@ const Menu = () => {
         onClick={() => handleMenuClick(MENU_BTN_UTILS.SQUARE)}
       >
         <FontAwesomeIcon icon={faSquare} />
+      </div>
+
+      <div
+        className={`${
+          activeMenuBtn === MENU_BTN_UTILS.LINE ? "active" : ""
+        } iconwrapper`}
+        onClick={() => handleMenuClick(MENU_BTN_UTILS.LINE)}
+      >
+        <FontAwesomeIcon icon={faMinus} size="xl" />
+      </div>
+
+      <div
+        className={`${
+          activeMenuBtn === MENU_BTN_UTILS.CIRCLE ? "active" : ""
+        } iconwrapper`}
+        onClick={() => handleMenuClick(MENU_BTN_UTILS.CIRCLE)}
+      >
+        <FontAwesomeIcon icon={faCircle} />
+      </div>
+
+      <div
+        className={`${
+          activeMenuBtn === MENU_BTN_UTILS.ARROW ? "active" : ""
+        } iconwrapper`}
+        onClick={() => handleMenuClick(MENU_BTN_UTILS.ARROW)}
+      >
+        <FontAwesomeIcon icon={faArrowRight} />
       </div>
 
       <div className="iconwrapper">

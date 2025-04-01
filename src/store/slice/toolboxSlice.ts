@@ -24,6 +24,26 @@ const initialState = {
     size: 3,
   },
 
+  [MENU_BTN_UTILS.SQUARE]: {
+    color: "",
+    size: 3,
+  },
+
+  [MENU_BTN_UTILS.CIRCLE]: {
+    color: "",
+    size: 3,
+  },
+
+  [MENU_BTN_UTILS.LINE]: {
+    color: "",
+    size: 3,
+  },
+
+  [MENU_BTN_UTILS.ARROW]: {
+    color: "",
+    size: 3,
+  },
+
   [MENU_BTN_UTILS.SELECTION]: {
     color: "",
     size: 3,

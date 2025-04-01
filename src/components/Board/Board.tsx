@@ -21,27 +21,112 @@ type CordsType = {
 type EventType = React.MouseEvent<HTMLCanvasElement>;
 
 type ElementType = {
+  // id: number;
   x1: number;
   y1: number;
   x2: number;
   y2: number;
   roughJsx?: Drawable;
+  type?: string;
 };
+
+type CicleElementType = {
+  cx: number;
+  cy: number;
+  diameter: number;
+  roughJsx?: Drawable;
+  cx2?: number;
+};
+
+type ContextType = CanvasRenderingContext2D & { isContextLost: () => boolean };
 
 const generator = rough.generator();
 
+// const createElement = (
+//   x1: number,
+//   y1: number,
+//   x2: number,
+//   y2: number,
+//   type:string
+
+// ): ElementType => {
+//   const roughJsx = generator.line(x1, y1, x2, y2);
+//   return { x1, y1, x2, y2, roughJsx };
+// };
+
 const createElement = (
+  // id: number,
   x1: number,
   y1: number,
   x2: number,
-  y2: number
-): ElementType => {
-  const roughJsx = generator.line(x1, y1, x2, y2);
-  return { x1, y1, x2, y2, roughJsx };
+  y2: number,
+  type: string
+) => {
+  let roughJsx;
+  //   type === MENU_BTN_UTILS.LINE
+  //     ? generator.line(x1, y1, x2, y2)
+  //     : generator.rectangle(x1, y1, x2 - x1, y2 - y1);
+  // if (type === MENU_BTN_UTILS.CIRCLE) {
+  //  const roughJsx = generator.ellipse(x1, y1, x2, y2);
+  // }
+
+  switch (type) {
+    case MENU_BTN_UTILS.LINE:
+      roughJsx = generator.line(x1, y1, x2, y2);
+      break;
+
+    case MENU_BTN_UTILS.SQUARE:
+      roughJsx = generator.rectangle(x1, y1, x2 - x1, y2 - y1);
+      break;
+
+    case MENU_BTN_UTILS.CIRCLE:
+      roughJsx = generator.ellipse(x1, y1, x2 - x1, y2 - y1);
+      break;
+
+    default:
+      break;
+  }
+  if (roughJsx) return { x1, y1, x2, y2, type, roughJsx };
+};
+
+const createCircleElement = (cx: number, cy: number, diameter: number) => {
+  const roughJsx = generator.circle(cx, cy, diameter);
+  return { cx, cy, diameter, roughJsx };
+};
+
+const isWithinElement = (x, y, elements) => {
+  const { type, x1, x2, y1, y2 } = elements;
+  if (type === "SQUARE") {
+    const minX = Math.min(x1, x2);
+    const maxX = Math.max(x1, x2);
+    const minY = Math.min(y1, y2);
+    const maxY = Math.max(y1, y2);
+
+    return x >= minX && x <= maxX && y >= minY && y <= maxY;
+  } else {
+    const a = { x: x1, y: y1 };
+    const b = { x: x2, y: y2 };
+    const c = { x, y };
+
+    const offSet: number = distance(a, b) - (distance(a, c) + distance(b, c));
+
+    return Math.abs(offSet) < 1;
+  }
+};
+
+function distance(a: any, b: any) {
+  return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
+}
+
+const getElementAtPosition = (x: any, y: any, elements: any) => {
+  return elements.find((element: any) => isWithinElement(x, y, element));
 };
 
 const Board = () => {
   const [elements, setElements] = useState<ElementType[]>([]);
+  const [action, setAction] = useState("none");
+  const [selectedElement, setSelectedElement] = useState(null);
+  const [elementsCircle, setCircleElements] = useState<CicleElementType[]>([]);
   const dispatch = useAppDispatch();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -142,42 +227,163 @@ const Board = () => {
     };
 
     const drawRect = (e: EventType) => {
-      const element = createElement(e.clientX, e.clientY, e.clientX, e.clientY);
+      const element = createElement(
+        e.clientX,
+        e.clientY,
+        e.clientX,
+        e.clientY,
+        MENU_BTN_UTILS.SQUARE
+      );
 
       setElements((prev: any[]) => [...prev, element]);
     };
 
+    const drawLine = (e: EventType) => {
+      const element = createElement(
+        e.clientX,
+        e.clientY,
+        e.clientX,
+        e.clientY,
+        MENU_BTN_UTILS.LINE
+      );
+
+      setElements((prev: any[]) => [...prev, element]);
+      console.log("elements", elements);
+    };
+
+    const drawCicle = (e: EventType) => {
+      const element = createElement(
+        e.clientX,
+        e.clientY,
+        e.clientX,
+        e.clientY,
+        MENU_BTN_UTILS.CIRCLE
+      );
+
+      setElements((prev: any[]) => [...prev, element]);
+
+      // setCircleElements((prev: any[]) => [...prev, element]);
+      console.log("elementsCircle", elements);
+    };
+
     // const rect = generator.rectangle(10, 10, 100, 100);
+    const rc = generator.ellipse(200, 200, 50, 50);
 
-    // roughCanvas.draw(rect);
+    roughCanvas.draw(rc);
 
-    const UpdateRectValue = ({ clientX, clientY }: EventType) => {
+    const UpdateRoughValue = ({ clientX, clientY }: EventType) => {
       const { x1, y1 } = elements[elements.length - 1];
-      const updatedElement = createElement(x1, y1, clientX, clientY);
+      let updatedElement = null;
+      switch (activeMenuBtnRef.current) {
+        case MENU_BTN_UTILS.LINE:
+          updatedElement = createElement(
+            x1,
+            y1,
+            clientX,
+            clientY,
+            MENU_BTN_UTILS.LINE
+          );
+
+          break;
+
+        case MENU_BTN_UTILS.SQUARE:
+          updatedElement = createElement(
+            x1,
+            y1,
+            clientX,
+            clientY,
+            MENU_BTN_UTILS.SQUARE
+          );
+
+          break;
+
+        case MENU_BTN_UTILS.CIRCLE:
+          updatedElement = createElement(
+            x1,
+            y1,
+            clientX,
+            clientY,
+            MENU_BTN_UTILS.CIRCLE
+          );
+
+          break;
+
+        default:
+          break;
+      }
 
       const copyElements = [...elements];
+
+      if (!updatedElement) return;
 
       copyElements[elements.length - 1] = updatedElement;
 
       setElements(copyElements);
-
-      elements.forEach(({ roughJsx }) => {
-        if (!roughJsx) return;
-        roughCanvas.draw(roughJsx);
-        // context?.stroke();
-      });
     };
+
+    // const UpdateCircleValue = (e: EventType) => {
+    //   const { x1, y1 } = elements[elements.length - 1];
+
+    //   let updatedElement = createElement(
+    //     x1,
+    //     y1,
+    //     e.clientX,
+    //     e.clientY,
+    //     MENU_BTN_UTILS.CIRCLE
+    //   );
+
+    //   const copyElements = [...elements];
+
+    //   copyElements[elements.length - 1] = updatedElement;
+
+    //   setElements(copyElements);
+    // };
+
+    // const handleSelection = () => {
+    //   const element = getElementAtPosition(clientX, clientY, elements);
+    // };
 
     //mouse events
 
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
       Drawable.current = true;
 
-      beginPath(e.clientX, e.clientY);
+      // beginPath(e.clientX, e.clientY);
 
-      if (activeMenuBtnRef.current === MENU_BTN_UTILS.LINE) {
-        drawRect(e);
+      switch (activeMenuBtnRef.current) {
+        case MENU_BTN_UTILS.LINE:
+          Drawable.current = true;
+          drawLine(e);
+
+          break;
+
+        case MENU_BTN_UTILS.SQUARE:
+          Drawable.current = true;
+          drawRect(e);
+
+          break;
+
+        case MENU_BTN_UTILS.CIRCLE:
+          Drawable.current = true;
+          drawCicle(e);
+          break;
+
+        case MENU_BTN_UTILS.SELECTION:
+          Drawable.current = false;
+          const element = getElementAtPosition(e.clientX, e.clientY, elements);
+
+          if (element) {
+            setSelectedElement(element);
+            setAction("moving");
+          }
+          break;
+
+        default:
+          beginPath(e.clientX, e.clientY);
+
+          break;
       }
+
       socket.emit("beginPath", { x: e.clientX, y: e.clientY });
     };
 
@@ -185,27 +391,47 @@ const Board = () => {
       if (!Drawable.current) return;
       drawStroke(e.clientX, e.clientY);
 
-      if (activeMenuBtnRef.current === MENU_BTN_UTILS.LINE) {
-        if (!Drawable.current) return;
+      // if (action === "drawing") {
+      switch (activeMenuBtnRef.current) {
+        case MENU_BTN_UTILS.LINE:
+          if (!Drawable.current) return;
 
-        UpdateRectValue(e);
+          UpdateRoughValue(e);
+          break;
+
+        case MENU_BTN_UTILS.SQUARE:
+          if (!Drawable.current) return;
+
+          UpdateRoughValue(e);
+          break;
+
+        case MENU_BTN_UTILS.CIRCLE:
+          if (!Drawable.current) return;
+
+          UpdateRoughValue(e);
+          break;
+
+        default:
+          break;
       }
+      // } else if (action === "moving") {
+      //   const {} = selectedElement;
+      // }
 
       socket.emit("drawStroke", { x: e.clientX, y: e.clientY });
     };
 
     const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
       Drawable.current = false;
+      setAction("none");
+      setSelectedElement(null);
+
       const imageData = context?.getImageData(
         0,
         0,
         canvas.width,
         canvas.height
       );
-
-      if (activeMenuBtnRef.current === MENU_BTN_UTILS.SQUARE) {
-        context?.stroke();
-      }
 
       historyArray.current.push(imageData);
       historyPointer.current = historyArray.current.length - 1;
@@ -227,10 +453,21 @@ const Board = () => {
 
     const handleDrawStroke = (cords: CordsType) => {
       drawStroke(cords.x, cords.y);
-
-      if (activeMenuBtnRef.current === MENU_BTN_UTILS.SQUARE) {
-      }
     };
+
+    elements.forEach(({ roughJsx }) => {
+      if (!roughJsx) return;
+      roughCanvas.draw(roughJsx);
+    });
+
+    // elementsCircle.forEach(({ roughJsx }) => {
+    //   if (!roughJsx) return;
+    //   roughCanvas.draw(roughJsx);
+    // });
+
+    // const circle = generator.circle(500, 50, 120);
+
+    // roughCanvas.draw(circle);
 
     canvas.addEventListener("mousedown", handleMouseDown);
     canvas.addEventListener("mousemove", handleMouseMove);

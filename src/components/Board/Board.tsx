@@ -30,9 +30,14 @@ type ElementType = {
   id?: number;
 };
 
-type SelectedElementType = ElementType & { offsetX: number; offsetY: number };
+type SelectedElementType = {
+  element: ElementType;
+  offsetX?: number;
+  offsetY?: number;
+  // position?: string;
+};
 
-type ActionType = "moving" | "drawing" | "none";
+type ActionType = "moving" | "drawing" | "none" | "resize";
 
 type ContextType = CanvasRenderingContext2D & { isContextLost: () => boolean };
 
@@ -44,16 +49,15 @@ const createElement = (
   x2: number,
   y2: number,
   type: string,
-  id: number,
-  selectedElement?: SelectedElementType
+  id: number
 ): ElementType => {
   let roughJsx;
   let storedjsx;
 
-  roughJsx =
-    type === MENU_BTN_UTILS.LINE
-      ? generator.line(x1, y1, x2, y2)
-      : generator.rectangle(x1, y1, x2 - x1, y2 - y1);
+  //  roughJsx =
+  //   type === MENU_BTN_UTILS.LINE
+  //     ? generator.line(x1, y1, x2, y2)
+  //     : generator.rectangle(x1, y1, x2 - x1, y2 - y1);
 
   switch (type) {
     case MENU_BTN_UTILS.LINE:
@@ -79,15 +83,29 @@ const createElement = (
   return { x1, y1, x2, y2, type, roughJsx, id };
 };
 
-const isWithinElement = (x: number, y: number, elements: ElementType) => {
+const nearPoint = (
+  x: number,
+  y: number,
+  x1: number,
+  y1: number,
+  identifier: string
+) => {
+  return Math.abs(x - x1) < 5 && Math.abs(y - y1) < 5 ? identifier : null;
+};
+
+const PositionisWithinElement = (
+  x: number,
+  y: number,
+  elements: ElementType
+) => {
   const { type, x1, x2, y1, y2 } = elements;
   if (type === "SQUARE" || type === "CIRCLE") {
-    const minX = Math.min(x1, x2);
-    const maxX = Math.max(x1, x2);
-    const minY = Math.min(y1, y2);
-    const maxY = Math.max(y1, y2);
-
-    return x >= minX && x <= maxX && y >= minY && y <= maxY;
+    const topLeft = nearPoint(x, y, x1, y1, "tl");
+    const topRight = nearPoint(x, y, x2, y1, "tr");
+    const bottomLeft = nearPoint(x, y, x1, y2, "bl");
+    const bottomRight = nearPoint(x, y, x2, y2, "br");
+    const inside = x >= x1 && x <= x2 && y >= y1 && y <= y2 ? "inside" : null;
+    return topLeft || topRight || bottomLeft || bottomRight || inside;
   } else {
     const a = { x: x1, y: y1 };
     const b = { x: x2, y: y2 };
@@ -95,7 +113,13 @@ const isWithinElement = (x: number, y: number, elements: ElementType) => {
 
     const offSet: number = distance(a, b) - (distance(a, c) + distance(b, c));
 
-    return Math.abs(offSet) < 1;
+    const start = nearPoint(x, y, x1, y1, "start");
+
+    const end = nearPoint(x, y, x2, y2, "end");
+
+    const inside = Math.abs(offSet) < 1 ? "inside" : null;
+
+    return start || end || inside;
   }
 };
 
@@ -108,13 +132,18 @@ const getElementAtPosition = (
   y: number,
   elements: ElementType[]
 ) => {
-  return elements.find((element: ElementType) =>
-    isWithinElement(x, y, element)
-  );
+  return elements
+    .map((element) => ({
+      ...element,
+      position: PositionisWithinElement(x, y, element),
+    }))
+    .find((element) => element.position !== null);
 };
 
 const adjustElementCoords = (element: ElementType) => {
   const { type, x1, y1, x2, y2 } = element;
+
+  console.log(type, x1, y1, x2, y2, "from adjuestElementCoords");
 
   switch (type) {
     case MENU_BTN_UTILS.LINE:
@@ -139,6 +168,44 @@ const adjustElementCoords = (element: ElementType) => {
   }
 };
 
+const cursorForPosition = (position: string) => {
+  switch (position) {
+    case "tl":
+    case "br":
+    case "start":
+    case "end":
+      return "nwse-resize";
+    case "tr":
+    case "bl":
+      return "nesw-resize";
+    default:
+      return "move";
+  }
+};
+
+const resizeElementCoords = (
+  clientX: number,
+  clientY: number,
+  position: string,
+  coordinates: any
+) => {
+  const { x1, y1, x2, y2 } = coordinates;
+  switch (position) {
+    case "tl":
+    case "start":
+      return { x1: clientX, y1: clientY, x2, y2 };
+    case "tr":
+      return { x1, y1: clientY, x2: clientX, y2 };
+    case "bl":
+      return { x1: clientX, y1, x2, y2: clientY };
+    case "br":
+    case "end":
+      return { x1, y1, x2: clientX, y2: clientY };
+    default:
+      return null; //should not really get here...
+  }
+};
+
 //////////////////////////////////////////////COMPONENT MAIN FUNCTION BODY//////////////////////////////////////////////////////////////////////////////////////////////////////
 
 const Board = () => {
@@ -149,8 +216,9 @@ const Board = () => {
   const [action, setAction] = useState<ActionType>("none");
 
   // const selectedElement = useRef<SelectedElementType | null>(null);
-  const [selectedElement, setSelectedElement] =
-    useState<SelectedElementType | null>(null);
+  const [selectedElement, setSelectedElement] = useState<SelectedElementType>(
+    {} as SelectedElementType
+  );
 
   const idRef = useRef<number>(0);
 
@@ -231,8 +299,7 @@ const Board = () => {
     x2: number,
     y2: number,
     type: string,
-    id: number,
-    selectedElement?: SelectedElementType
+    id: number
   ) => {
     const updatedElement = createElement(x1, y1, x2, y2, type, id);
     const copyElements = [...elements];
@@ -282,15 +349,22 @@ const Board = () => {
       if (activeMenuBtnRef.current === MENU_BTN_UTILS.SELECTION) {
         const element = getElementAtPosition(e.clientX, e.clientY, elements);
 
+        console.log("eleeeme", element);
+
         if (element) {
           const offsetX = e.clientX - element.x1;
+
           const offsetY = e.clientY - element.y1;
-          setAction("moving");
+
           setSelectedElement({ ...element, offsetX, offsetY });
+
+          if (element.position === "inside") {
+            setAction("moving");
+          } else {
+            setAction("resize");
+          }
           // selectedElement.current = { ...element, offsetX, offsetY };
           // action.current = "moving";
-
-          console.log(selectedElement, action);
         }
       } else {
         //drawing
@@ -307,79 +381,13 @@ const Board = () => {
           idRef.current
         );
 
-        console.log(element, "element on mousedown");
+        setSelectedElement(element);
 
         setElements((prev) => [...prev, element]);
 
         setAction("drawing");
         // action.current = "drawing";
       }
-
-      // switch (activeMenuBtnRef.current) {
-      //   case MENU_BTN_UTILS.LINE:
-      //     Drawable.current = true;
-      //     // action.current = "drawing";
-      //     setAction("drawing");
-      //     drawLine(e, id);
-
-      //     break;
-
-      //   case MENU_BTN_UTILS.SQUARE:
-      //     Drawable.current = true;
-      //     // action.current = "drawing";
-      //     setAction("drawing");
-
-      //     drawRect(e, id);
-
-      //     break;
-
-      //   case MENU_BTN_UTILS.CIRCLE:
-      //     Drawable.current = true;
-      //     // action.current = "drawing";
-      //     setAction("drawing");
-
-      //     drawCicle(e, id);
-      //     break;
-
-      //   case MENU_BTN_UTILS.SELECTION:
-      //     Drawable.current = false;
-      //     const element = getElementAtPosition(e.clientX, e.clientY, elements);
-      //     console.log(
-      //       element,
-      //       elements,
-      //       "elements.lenght=",
-      //       elements.length,
-      //       id
-      //     );
-
-      //     if (element) {
-      //       selectedElement.current = element;
-
-      //       // action.current = "moving";
-      //       setAction("moving");
-      //       console.log("selectedele", selectedElement.current, id);
-      //     } else {
-      //       // action.current = "none";
-      //       const id = elements.length;
-      //       const element = createElement(
-      //         e.clientX,
-      //         e.clientY,
-      //         e.clientX,
-      //         e.clientY,
-      //         activeMenuBtnRef.current,
-      //         id
-      //       );
-      //       setElements((prev) => [...prev, element]);
-      //       setAction("none");
-      //     }
-      //     break;
-
-      //   default:
-      //     // action.current = "drawing";
-      //     // setAction("drawing")
-
-      //     break;
-      // }
 
       socket.emit("beginPath", { x: e.clientX, y: e.clientY });
     };
@@ -391,14 +399,21 @@ const Board = () => {
 
       // drawStroke(e.clientX, e.clientY);
       if (activeMenuBtnRef.current === MENU_BTN_UTILS.SELECTION) {
-        const element = e.target as HTMLCanvasElement;
-        element.style.cursor = getElementAtPosition(
-          e.clientX,
-          e.clientY,
-          elements
-        )
-          ? "move"
+        const target = e.target as HTMLCanvasElement;
+
+        const element = getElementAtPosition(e.clientX, e.clientY, elements);
+        if (!element?.position) return;
+        target.style.cursor = element
+          ? cursorForPosition(element.position)
           : "default";
+
+        // target.style.cursor = getElementAtPosition(
+        //   e.clientX,
+        //   e.clientY,
+        //   elements
+        // )
+        //   ? "move"
+        //   : "default";
       }
 
       if (action === "drawing") {
@@ -413,33 +428,10 @@ const Board = () => {
           activeMenuBtnRef.current,
           index
         );
-        // const updatedElement = createElement(
-        //   x1,
-        //   y1,
-        //   e.clientX,
-        //   e.clientY,
-        //   activeMenuBtnRef.current,
-        //   index
-        // );
-
-        // const copyElements = [...elements];
-
-        // copyElements[index] = updatedElement;
-        // setElements(copyElements);
       } else if (action === "moving") {
         console.log(selectedElement, "selele");
 
         if (!selectedElement) return;
-
-        // const isd = elements.length;
-        // console.log(
-        //   "ffoj",
-        //   elements[elements.length],
-        //   selectedElement,
-        //   isd,
-        //   idRef.current,
-        //   "---i fucking ddd"
-        // );
 
         const { x1, y1, x2, y2, type, id, offsetX, offsetY } = selectedElement;
 
@@ -452,6 +444,8 @@ const Board = () => {
           "how the fck is this undefined"
         );
 
+        if (!id || !offsetX || !offsetY) return;
+
         const width = x2 - x1;
 
         const height = y2 - y1;
@@ -460,7 +454,6 @@ const Board = () => {
 
         const newY = e.clientY - offsetY;
 
-        // if (!id) return;
         updateElement(
           newX,
           newY,
@@ -469,19 +462,47 @@ const Board = () => {
           activeMenuBtnRef.current,
           idRef.current
         );
+      } else if (action === "resize") {
+        // if (!selectedElement) return;
+
+        const { id, type, position, ...cordinates } = selectedElement;
+
+        const { x1, y1, x2, y2 } = resizeElementCoords(
+          e.clientX,
+          e.clientY,
+          position,
+          cordinates
+        );
+
+        if (!id || !type) return;
+
+        updateElement(x1, y1, x2, y2, type, id);
       }
 
       socket.emit("drawStroke", { x: e.clientX, y: e.clientY });
     };
 
-    ////////////////////////////////////////////MOUSE UP /////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////MOUSE UP /////////////////////////////////////////////////////////////////////////////////////////////////////
 
     const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
-      Drawable.current = false;
+      const index = selectedElement?.id;
+
+      if (!index) return;
+
+      const { id, type } = elements[index];
+
+      if (!type || !id) return;
+
+      if (action == "drawing" || action === "resize") {
+        const { x1, y1, x2, y2 } = adjustElementCoords(elements[index])!;
+
+        updateElement(x1, y1, x2, y2, type, id);
+      }
+      // Drawable.current = false;
 
       setAction("none");
 
-      // setSelectedElement(null);
+      setSelectedElement(null);
 
       const imageData = context?.getImageData(
         0,
@@ -492,6 +513,7 @@ const Board = () => {
 
       historyArray.current.push(imageData);
       historyPointer.current = historyArray.current.length - 1;
+      console.log(elements, "element seperate");
     };
 
     const handleKeyPressCombo = (e: React.KeyboardEvent) => {

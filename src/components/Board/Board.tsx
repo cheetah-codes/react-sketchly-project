@@ -7,7 +7,6 @@ import { MENU_BTN_UTILS } from "../../utils";
 import { actionBtnClick } from "../../store/slice/menuSlice";
 import { socket } from "../../utils/socket";
 import { Drawable } from "roughjs/bin/core";
-import { height } from "@fortawesome/free-solid-svg-icons/faBell";
 
 type ConfigType = {
   colour: string;
@@ -31,6 +30,8 @@ type ElementType = {
   id?: number;
 };
 
+type SelectedElementType = ElementType & { offsetX: number; offsetY: number };
+
 type ActionType = "moving" | "drawing" | "none";
 
 type ContextType = CanvasRenderingContext2D & { isContextLost: () => boolean };
@@ -43,9 +44,16 @@ const createElement = (
   x2: number,
   y2: number,
   type: string,
-  id?: number
+  id: number,
+  selectedElement?: SelectedElementType
 ): ElementType => {
   let roughJsx;
+  let storedjsx;
+
+  roughJsx =
+    type === MENU_BTN_UTILS.LINE
+      ? generator.line(x1, y1, x2, y2)
+      : generator.rectangle(x1, y1, x2 - x1, y2 - y1);
 
   switch (type) {
     case MENU_BTN_UTILS.LINE:
@@ -60,7 +68,12 @@ const createElement = (
       roughJsx = generator.ellipse(x1, y1, x2 - x1, y2 - y1);
       break;
 
+    case MENU_BTN_UTILS.SELECTION:
+      roughJsx = generator.rectangle(x1, y1, x2 - x1, y2 - y1);
+      break;
+
     default:
+      throw new Error(`type not found:${type}`);
       break;
   }
   return { x1, y1, x2, y2, type, roughJsx, id };
@@ -95,7 +108,35 @@ const getElementAtPosition = (
   y: number,
   elements: ElementType[]
 ) => {
-  return elements.find((element: any) => isWithinElement(x, y, element));
+  return elements.find((element: ElementType) =>
+    isWithinElement(x, y, element)
+  );
+};
+
+const adjustElementCoords = (element: ElementType) => {
+  const { type, x1, y1, x2, y2 } = element;
+
+  switch (type) {
+    case MENU_BTN_UTILS.LINE:
+      if (x1 < x2 || (x1 === x2 && y1 < y2)) {
+        return { x1, y1, x2, y2 };
+      } else {
+        return { x1: x2, y1: y2, x2: x1, y2: y1 };
+      }
+      break;
+
+    case MENU_BTN_UTILS.SQUARE || MENU_BTN_UTILS.CIRCLE:
+      const minX = Math.min(x1, x2);
+      const maxX = Math.max(x1, x2);
+      const minY = Math.min(y1, y2);
+      const maxY = Math.max(y1, y2);
+
+      return { x1: minX, y1: minY, x2: maxX, y2: maxY };
+      break;
+
+    default:
+      break;
+  }
 };
 
 //////////////////////////////////////////////COMPONENT MAIN FUNCTION BODY//////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -107,12 +148,11 @@ const Board = () => {
 
   const [action, setAction] = useState<ActionType>("none");
 
-  // const selectedElement = useRef<ElementType | null>(null);
-  const [selectedElement, setSelectedElement] = useState<ElementType | null>(
-    null!
-  );
+  // const selectedElement = useRef<SelectedElementType | null>(null);
+  const [selectedElement, setSelectedElement] =
+    useState<SelectedElementType | null>(null);
 
-  const idRef = useRef<number>(elements.length);
+  const idRef = useRef<number>(0);
 
   const dispatch = useAppDispatch();
 
@@ -151,7 +191,6 @@ const Board = () => {
       anchor.href = Url;
       anchor.download = "sketch.png";
       anchor.click();
-      console.log(Url);
     }
     // console.log("active2", activeMenuBtn);
 
@@ -186,6 +225,23 @@ const Board = () => {
     };
   }, [color, size]);
 
+  const updateElement = (
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    type: string,
+    id: number,
+    selectedElement?: SelectedElementType
+  ) => {
+    const updatedElement = createElement(x1, y1, x2, y2, type, id);
+    const copyElements = [...elements];
+
+    copyElements[id] = updatedElement;
+
+    setElements(copyElements);
+  };
+
   //bafore browser paint
 
   useLayoutEffect(() => {
@@ -214,136 +270,6 @@ const Board = () => {
       context?.stroke();
     };
 
-    // const drawRect = (e: EventType, id: number) => {
-    //   const element = createElement(
-    //     e.clientX,
-    //     e.clientY,
-    //     e.clientX,
-    //     e.clientY,
-    //     MENU_BTN_UTILS.SQUARE,
-    //     id
-    //   );
-
-    //   setElements((prev: any[]) => [...prev, element]);
-    // };
-
-    // const drawLine = (e: EventType, id: number) => {
-    //   const element = createElement(
-    //     e.clientX,
-    //     e.clientY,
-    //     e.clientX,
-    //     e.clientY,
-    //     MENU_BTN_UTILS.LINE,
-    //     id
-    //   );
-
-    //   setElements((prev: any[]) => [...prev, element]);
-    // };
-
-    // const drawCicle = (e: EventType, id: number) => {
-    //   const element = createElement(
-    //     e.clientX,
-    //     e.clientY,
-    //     e.clientX,
-    //     e.clientY,
-    //     MENU_BTN_UTILS.CIRCLE,
-    //     id
-    //   );
-
-    //   setElements((prev: any[]) => [...prev, element]);
-    // };
-
-    // const rect = generator.rectangle(10, 10, 100, 100);
-    // const rc = generator.ellipse(200, 200, 50, 50);
-
-    // roughCanvas.draw(rc);
-
-    const UpdateRoughValue = ({ clientX, clientY }: EventType, id: number) => {
-      const { x1, y1 } = elements[id];
-      let updatedElement = null;
-      switch (activeMenuBtnRef.current) {
-        case MENU_BTN_UTILS.LINE:
-          updatedElement = createElement(
-            x1,
-            y1,
-            clientX,
-            clientY,
-            MENU_BTN_UTILS.LINE,
-            id
-          );
-
-          break;
-
-        case MENU_BTN_UTILS.SQUARE:
-          updatedElement = createElement(
-            x1,
-            y1,
-            clientX,
-            clientY,
-            MENU_BTN_UTILS.SQUARE,
-            id
-          );
-
-          break;
-
-        case MENU_BTN_UTILS.CIRCLE:
-          updatedElement = createElement(
-            x1,
-            y1,
-            clientX,
-            clientY,
-            MENU_BTN_UTILS.CIRCLE,
-            id
-          );
-
-          break;
-
-        default:
-          break;
-      }
-
-      const copyElements = [...elements];
-
-      if (!updatedElement) return;
-
-      copyElements[id] = updatedElement;
-
-      setElements(copyElements);
-    };
-
-    const updateElement = (
-      x1: number,
-      y1: number,
-      x2: number,
-      y2: number,
-      type: string,
-      id: number
-    ) => {
-      const updatedElement = createElement(x1, y1, x2, y2, type, id);
-      const copyElements = [...elements];
-
-      // if (!updatedElement) return;
-      copyElements[id] = updatedElement;
-
-      setElements(copyElements);
-    };
-
-    const moveElement = (
-      x1: number,
-      y1: number,
-      x2: number,
-      y2: number,
-      type: string,
-      id: number
-    ) => {
-      const updatedElement = createElement(x1, y1, x2, y2, type, id);
-      const copyElements = [...elements];
-
-      // if (!updatedElement) return;
-      copyElements[elements.length] = updatedElement;
-
-      setElements(copyElements);
-    };
     //mouse events
 
     ////////////////////////////////////////////MOUSE DOWN /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -352,19 +278,25 @@ const Board = () => {
       Drawable.current = true;
 
       beginPath(e.clientX, e.clientY);
-      // action.current = "none";
 
       if (activeMenuBtnRef.current === MENU_BTN_UTILS.SELECTION) {
         const element = getElementAtPosition(e.clientX, e.clientY, elements);
 
         if (element) {
-          // selectedElement.current = element;
-          setSelectedElement(element);
+          const offsetX = e.clientX - element.x1;
+          const offsetY = e.clientY - element.y1;
           setAction("moving");
+          setSelectedElement({ ...element, offsetX, offsetY });
+          // selectedElement.current = { ...element, offsetX, offsetY };
+          // action.current = "moving";
+
+          console.log(selectedElement, action);
         }
       } else {
-        // action.current = "none";
-        const id = elements.length;
+        //drawing
+        idRef.current = elements.length;
+
+        console.log("elemnt on mousedown", elements[idRef.current]);
 
         const element = createElement(
           e.clientX,
@@ -372,10 +304,15 @@ const Board = () => {
           e.clientX,
           e.clientY,
           activeMenuBtnRef.current,
-          id
+          idRef.current
         );
+
+        console.log(element, "element on mousedown");
+
         setElements((prev) => [...prev, element]);
+
         setAction("drawing");
+        // action.current = "drawing";
       }
 
       // switch (activeMenuBtnRef.current) {
@@ -453,28 +390,21 @@ const Board = () => {
       if (!Drawable.current) return;
 
       // drawStroke(e.clientX, e.clientY);
+      if (activeMenuBtnRef.current === MENU_BTN_UTILS.SELECTION) {
+        const element = e.target as HTMLCanvasElement;
+        element.style.cursor = getElementAtPosition(
+          e.clientX,
+          e.clientY,
+          elements
+        )
+          ? "move"
+          : "default";
+      }
 
       if (action === "drawing") {
-        // switch (activeMenuBtnRef.current) {
-        //   case MENU_BTN_UTILS.LINE:
-        //     if (!Drawable.current) return;
-        //     UpdateRoughValue(e, index);
-        //     break;
-        //   case MENU_BTN_UTILS.SQUARE:
-        //     if (!Drawable.current) return;
-        //     UpdateRoughValue(e, index);
-        //     break;
-        //   case MENU_BTN_UTILS.CIRCLE:
-        //     if (!Drawable.current) return;
-        //     UpdateRoughValue(e, index);
-        //     break;
-        //   default:
-        //     break;
-        // }
-
         const index = elements.length - 1;
-
         const { x1, y1 } = elements[index];
+
         updateElement(
           x1,
           y1,
@@ -497,38 +427,48 @@ const Board = () => {
         // copyElements[index] = updatedElement;
         // setElements(copyElements);
       } else if (action === "moving") {
+        console.log(selectedElement, "selele");
+
         if (!selectedElement) return;
 
-        const isd = elements.length;
-        console.log(elements, isd, idRef.current, "---i fucking ddd");
+        // const isd = elements.length;
+        // console.log(
+        //   "ffoj",
+        //   elements[elements.length],
+        //   selectedElement,
+        //   isd,
+        //   idRef.current,
+        //   "---i fucking ddd"
+        // );
 
-        const { x1, x2, y1, y2, type, id } = selectedElement;
+        const { x1, y1, x2, y2, type, id, offsetX, offsetY } = selectedElement;
 
         console.log(
           selectedElement,
           id,
           idRef.current,
           action,
+          type,
           "how the fck is this undefined"
         );
 
         const width = x2 - x1;
+
         const height = y2 - y1;
 
-        if (!id) return;
-        moveElement(
-          e.clientX,
-          e.clientY,
-          e.clientX + width,
-          e.clientY + height,
+        const newX = e.clientX - offsetX;
+
+        const newY = e.clientY - offsetY;
+
+        // if (!id) return;
+        updateElement(
+          newX,
+          newY,
+          newX + width,
+          newY + height,
           activeMenuBtnRef.current,
-          isd
+          idRef.current
         );
-
-        // const copyElements = [...elements];
-
-        // copyElements[id] = updatedElement;
-        // setElements(copyElements);
       }
 
       socket.emit("drawStroke", { x: e.clientX, y: e.clientY });
@@ -539,20 +479,19 @@ const Board = () => {
     const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
       Drawable.current = false;
 
-      // action.current = "none";
-      // setAction("none");
+      setAction("none");
 
       // setSelectedElement(null);
 
-      // const imageData = context?.getImageData(
-      //   0,
-      //   0,
-      //   canvas.width,
-      //   canvas.height
-      // );
+      const imageData = context?.getImageData(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
 
-      // historyArray.current.push(imageData);
-      // historyPointer.current = historyArray.current.length - 1;
+      historyArray.current.push(imageData);
+      historyPointer.current = historyArray.current.length - 1;
     };
 
     const handleKeyPressCombo = (e: React.KeyboardEvent) => {
@@ -595,7 +534,7 @@ const Board = () => {
       socket.off("beginPath", handleBeginpath);
       socket.off("drawStroke", handleDrawStroke);
     };
-  }, [elements, selectedElement]);
+  }, [elements]);
 
   const handleUndo = () => {
     if (!canvasRef.current) return;
@@ -634,7 +573,7 @@ const Board = () => {
       <canvas ref={canvasRef} id="canvas">
         Drawing canvas
       </canvas>
-      <div>undo</div>
+      <div>undo {action}</div>
     </div>
   );
 };
